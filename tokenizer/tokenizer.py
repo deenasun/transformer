@@ -11,4 +11,10 @@ class Tokenizer:
     This class is simply a template that could be
     used in the future for other tokenizers.
     """
-    raise NotImplementedError("Tokenizer class not implemented yet.")
+
+    def encode(self, text):
+        pass
+
+    def decode(self, text):
+        pass
+        

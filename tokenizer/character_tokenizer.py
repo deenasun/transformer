@@ -20,5 +20,23 @@ class CharacterTokenizer(Tokenizer):
         # we will use a fixed set of characters that we know will be present in the dataset.
         self.characters = "aàâæbcçdeéèêëfghiîïjklmnoôœpqrstuùûüvwxyÿz0123456789,;.!?:'\"/\\|_@#$%^&*~`+-=<>()[]{} "
 
-        raise NotImplementedError("Need to implement vocab initialization and the two functions from tokenizer")
+        self.idx_to_vocab = {}
 
+        for idx, ch in enumerate(self.characters):
+            self.vocab[ch] = idx
+            self.idx_to_vocab[idx] = ch
+
+    def encode(self, text: str) -> torch.tensor:
+        vec = []
+        for ch in text:
+            vec.append(self.vocab[ch.lower()])
+        vec = torch.tensor(vec, dtype=torch.float)
+        return vec
+    
+    def decode(self, vec) -> str:
+        string = []
+        for e in vec:
+            e = int(e)
+            string.append(self.idx_to_vocab[e])
+        string = ''.join(string)
+        return string
