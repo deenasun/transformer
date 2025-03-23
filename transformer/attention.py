@@ -13,7 +13,7 @@ class MultiHeadAttention(nn.Module):
                  ):
         """
         The Multi-Head Attention layer will take in Q, K, and V
-        matrices and will output an attention matrix of shape <TODO>.
+        matrices and will output an attention matrix of shape (B, T, embedding_dim).
 
         First, Q, K, and V should be projected to have
         a shape of (B, T, C) where C = num_heads * qk_length 
@@ -100,12 +100,7 @@ class MultiHeadAttention(nn.Module):
         
         # Apply mask if provided
         if mask is not None:
-            # Ensure mask is broadcastable to the correct shape
-            # Since mask is (B, T, T), we need to add a dimension for num_heads
-            mask = mask.unsqueeze(1)  # Shape becomes (B, 1, T, T)
-            
-            # Apply mask to scaled_lookup
-            scaled_lookup = scaled_lookup + (mask == 0).int() * -1e9  # Masked values become very negative
+            scaled_lookup = scaled_lookup.mask_fill(mask, -1e9)
         
         attention = nn.functional.softmax(scaled_lookup, dim=-1)
         return torch.matmul(attention, V)
@@ -135,7 +130,7 @@ class MultiHeadAttention(nn.Module):
         K = self.split_heads(K, self.qk_length)
         V = self.split_heads(V, self.value_length)
 
-        attention = self.scaled_dot_product_attention(Q, K, V)
+        attention = self.scaled_dot_product_attention(Q, K, V, mask)
 
         attention = self.combine_heads(attention)
 
@@ -175,7 +170,6 @@ class FeedForwardNN(nn.Module):
         """
         # linear layers expect a tensor with shape (bath_size, features)
         # reshape x into shape (B*T, C)
-        print(x.shape)
         B, T, C = x.shape
         x = x.view(-1, C)
 

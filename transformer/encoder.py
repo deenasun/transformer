@@ -68,14 +68,30 @@ class EncoderLayer(nn.Module):
         self.value_length = value_length
 
         # Define any layers you'll need in the forward pass
-        raise NotImplementedError("Implement the EncoderLayer layer definitions!")
+        self.mha = MultiHeadAttention(self.num_heads, embedding_dim, qk_length, value_length)
+        self.ffn = FeedForwardNN(embedding_dim, ffn_hidden_dim)
+
+        self.norm1 = nn.LayerNorm(embedding_dim)
+        self.dropout1 = nn.Dropout(dropout)
+        self.norm2 = nn.LayerNorm(embedding_dim)
+        self.dropout2 = nn.Dropout(dropout)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         The forward pass of the EncoderLayer.
         """
-        raise NotImplementedError("Implement the EncoderLayer forward method!")
+        residual = x # save copy of x
+        x = self.mha(x, x, x)
+        x = x + residual # add residual
+        x = self.dropout1(x) # apply dropout layer
+        x = self.norm1(x) # norm
 
+        residual = x
+        x = self.ffn(x)
+        x = x + residual
+        x = self.dropout2(x)
+        x = self.norm2(x)
+        return x
 
 class Encoder(nn.Module):
 
@@ -126,12 +142,23 @@ class Encoder(nn.Module):
         # so we'll have to first create some kind of embedding
         # and then use the other layers we've implemented to
         # build out the Transformer encoder.
-        raise NotImplementedError("Implement the Encoder layer definitions!")
-
+        self.embedding = nn.Embedding(vocab_size, embedding_dim)
+        self.positional_encoding = PositionalEncoding(embedding_dim, dropout, max_length)
+        
+        self.encoder_layers = nn.ModuleList([EncoderLayer(num_heads, embedding_dim, ffn_hidden_dim, qk_length, value_length, dropout) for _ in range(num_layers)])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         The forward pass of the Encoder.
         """
-        raise NotImplementedError("Implement the Encoder forward method!")
+        # Create embedding of x
+        x = self.embedding(x)
+
+        # Add positional encoding
+        x = self.positional_encoding(x)
+
+        for encoder_layer in self.encoder_layers:
+            x = encoder_layer(x)
+
+        return x
 
