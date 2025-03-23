@@ -82,14 +82,14 @@ class EncoderLayer(nn.Module):
         """
         residual = x # save copy of x
         x = self.mha(x, x, x)
-        x = x + residual # add residual
         x = self.dropout1(x) # apply dropout layer
+        x = x + residual # add residual
         x = self.norm1(x) # norm
 
         residual = x
         x = self.ffn(x)
-        x = x + residual
         x = self.dropout2(x)
+        x = x + residual
         x = self.norm2(x)
         return x
 

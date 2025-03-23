@@ -60,22 +60,22 @@ class DecoderLayer(nn.Module):
         # Self attention with masked multi-head attention
         residual = x
         x = self.masked_mha(x, x, x, mask)
+        x = self.self_attn_dropout(x) # Attention Is All You Need paper applies dropout before adding
         x = x + residual
-        x = self.self_attn_dropout(x)
         x = self.self_attn_norm(x)
 
         # Cross attention using encoder's keys and values
         residual = x
         x = self.mha(x, enc_x, enc_x) # second multi-head attention block receives its keys and values from the encoder
-        x = x + residual
         x = self.cross_attn_dropout(x)
+        x = x + residual
         x = self.cross_attn_norm(x)
 
         # Feed forward
         residual = x
         x = self.ffnn(x)
-        x = x + residual
         x = self.ffnn_dropout(x)
+        x = x + residual
         x = self.ffnn_norm(x)
 
         return x
