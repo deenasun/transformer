@@ -1,5 +1,6 @@
 from tqdm import tqdm
 from pathlib import Path
+import os  # Add this import
 
 import torch
 
@@ -9,6 +10,9 @@ from transformer import Transformer, FrenchEnglishDataset
 from tokenizer.bpe_tokenizer import BPETokenizer
 
 def main():
+
+    # Ensure the 'ckpts' directory exists
+    os.makedirs("ckpts", exist_ok=True)
 
     tokenizer = BPETokenizer()
     vocab_size = len(tokenizer.vocab)
