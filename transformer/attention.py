@@ -100,7 +100,9 @@ class MultiHeadAttention(nn.Module):
         
         # Apply mask if provided
         if mask is not None:
-            scaled_lookup = scaled_lookup.mask_fill(mask, -1e9)
+            if mask.dtype != torch.bool: # convert float/integer masks into bool masks for masked_fill function
+                mask = mask == 0
+            scaled_lookup = scaled_lookup.masked_fill(mask, -1e9)
         
         attention = nn.functional.softmax(scaled_lookup, dim=-1)
         return torch.matmul(attention, V)

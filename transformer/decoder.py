@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 from .attention import MultiHeadAttention, FeedForwardNN
+from .encoder import PositionalEncoding
 
 class DecoderLayer(nn.Module):
     
@@ -41,14 +42,43 @@ class DecoderLayer(nn.Module):
         self.value_length = value_length
 
         # Define any layers you'll need in the forward pass
-        raise NotImplementedError("Implement the DecoderLayer layer definitions!")
+        self.masked_mha = MultiHeadAttention(num_heads, embedding_dim, qk_length, value_length)
+        self.mha = MultiHeadAttention(num_heads, embedding_dim, qk_length, value_length)
+        self.ffnn = FeedForwardNN(embedding_dim, ffn_hidden_dim)
+
+        self.self_attn_norm = nn.LayerNorm(embedding_dim)
+        self.self_attn_dropout = nn.Dropout(dropout)
+        self.cross_attn_norm = nn.LayerNorm(embedding_dim)
+        self.cross_attn_dropout = nn.Dropout(dropout)
+        self.ffnn_norm = nn.LayerNorm(embedding_dim)
+        self.ffnn_dropout = nn.Dropout(dropout)
     
     def forward(self, x: torch.Tensor, enc_x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """
         The forward pass of the DecoderLayer.
         """
-        raise NotImplementedError("Implement the DecoderLayer forward method!")
+        # Self attention with masked multi-head attention
+        residual = x
+        x = self.masked_mha(x, x, x, mask)
+        x = x + residual
+        x = self.self_attn_dropout(x)
+        x = self.self_attn_norm(x)
 
+        # Cross attention using encoder's keys and values
+        residual = x
+        x = self.mha(x, enc_x, enc_x) # second multi-head attention block receives its keys and values from the encoder
+        x = x + residual
+        x = self.cross_attn_dropout(x)
+        x = self.cross_attn_norm(x)
+
+        # Feed forward
+        residual = x
+        x = self.ffnn(x)
+        x = x + residual
+        x = self.ffnn_dropout(x)
+        x = self.ffnn_norm(x)
+
+        return x
 
 class Decoder(nn.Module):
 
@@ -98,16 +128,42 @@ class Decoder(nn.Module):
         # so we'll have to first create some kind of embedding
         # and then use the other layers we've implemented to
         # build out the Transformer decoder.
-        raise NotImplementedError("Implement the Decoder layer definitions!")
+
+        self.embedding = nn.Embedding(vocab_size, embedding_dim)
+        self.positional_encoding = PositionalEncoding(embedding_dim, dropout, max_length)
+
+        self.decoder_layers = nn.ModuleList([DecoderLayer(num_heads, embedding_dim, ffn_hidden_dim, qk_length, value_length, dropout) for _ in range(num_layers)])
+
+        # final output matrix to project output of decoder layers into vocab size
+        self.output_matrix = nn.Linear(embedding_dim, vocab_size)
+
 
     def make_mask(self, x: torch.Tensor) -> torch.Tensor:
         """
         Create a mask to prevent attention to future tokens.
         """
-        raise NotImplementedError("Implement the make_mask method!")
+        B, T, C = x.shape
+        mask = torch.ones((T, T))
+        mask = torch.triu(mask, 0)
+        # all elements on and above diagonal = 1, and should be set to False (not masked)
+        # all elements below diagonal = 0, and should be set to True (masked)
+        mask = mask == 0
+        return mask
+
 
     def forward(self, x: torch.Tensor, enc_x: torch.Tensor) -> torch.Tensor:
         """
         The forward pass of the Decoder.
         """
-        raise NotImplementedError("Implement the Decoder forward method!")
+        # Create embedding of input to Decoder
+        x = self.embedding(x)
+        x = self.positional_encoding(x)
+
+        # Create mask
+        mask = self.make_mask(x)
+
+        for decoder_layer in self.decoder_layers:
+            x = decoder_layer(x, enc_x, mask)
+
+        x = self.output_matrix(x)
+        return x
