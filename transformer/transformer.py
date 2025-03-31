@@ -62,6 +62,5 @@ class Transformer(nn.Module):
             torch.Tensor with shape (B, T2, C) representing the output logits
         """
         encoded = self.encoder(src)
-        decoded = self.decoder(tgt, encoded) # logits
-        out = nn.functional.softmax(decoded, dim=-1)
+        decoded = self.decoder(tgt, encoded)  # logits
         return decoded

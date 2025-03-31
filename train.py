@@ -16,7 +16,7 @@ def main():
 
     tokenizer = BPETokenizer()
     vocab_size = len(tokenizer.vocab)
-    train_dataset = FrenchEnglishDataset(Path("smaller.csv"), tokenizer=tokenizer, train=True)
+    train_dataset = FrenchEnglishDataset(Path("en-fr-small.csv"), tokenizer=tokenizer, train=True)
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, collate_fn=FrenchEnglishDataset.collate_fn)
 
     model = Transformer(vocab_size=vocab_size,

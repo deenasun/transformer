@@ -142,13 +142,9 @@ class Decoder(nn.Module):
         """
         Create a mask to prevent attention to future tokens.
         """
-        B, T, C = x.shape
-        mask = torch.ones((T, T))
-        mask = torch.triu(mask, 0)
-        # all elements on and above diagonal = 1, and should be set to False (not masked)
-        # all elements below diagonal = 0, and should be set to True (masked)
-        mask = mask == 0
-        return mask
+        T = x.size(1)
+        mask = torch.triu(torch.ones((T, T), device=x.device), diagonal=1).bool()
+        return mask  # Ensure mask is boolean
 
 
     def forward(self, x: torch.Tensor, enc_x: torch.Tensor) -> torch.Tensor:
